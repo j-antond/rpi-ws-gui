@@ -7,6 +7,7 @@ import time
 import serial.tools.list_ports
 
 MAX_DEVICES = 5
+
 class HMI(ttk.Window):
     def __init__(self,on_execute_callback):
         #super().__init__(themename="darkly")
@@ -103,17 +104,27 @@ class InicioPage(ttk.Frame):
         #Texto para mostrar que se está conectando/desconectando
         self.result_label = ttk.Label(self, text="")
         self.result_label.grid(row=4, column=0, columnspan=2, pady=10)
-
+        
+        self.ser = None
      
     def conectar_puerto(self):
         puerto = self.combobox_puertos.get()
         if puerto:
-            self.result_label.config(text=f"Intentando conectar a {puerto}...")
+            try:
+                self.ser = serial.Serial(puerto)
+                self.result_label.config(text=f"Intentando conectar a {puerto}...")
+                
+            except Exception as e:
+                self.result_label.config(text=f"Error al conectar: {e}")
+        else:
+            self.result_label.config(text="Selecciona un puerto")
             
     def desconectar_puerto(self):
-        puerto = self.combobox_puertos.get()
-        if puerto:
-             self.result_label.config(text=f"Intentando desconectar de {puerto}...")
+        if self.ser and self.ser.is_open:
+            self.ser.close()
+            self.result_label.config(text="Puerto desconectado")
+        else:
+            self.result_label.config(text="No hay conexión abierta")
 
 # 🔹 Página de Configuración
 class ConfigPage(ttk.Frame):
