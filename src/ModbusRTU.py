@@ -1,5 +1,6 @@
 import logging
 import pycrc
+
 logging.basicConfig(level=logging.INFO)
 
 class ModbusRTU_Commands:
@@ -48,7 +49,7 @@ class ModbusRTU_Commands:
     def get_command_code(cls, command_name):
         """ Devuelve el código de función Modbus correspondiente a un nombre de comando. """
         return cls.COMMANDS.get(command_name.upper(), None)
-    
+
     def command_exists(self,function_code,array_commands):
         if function_code not in array_commands.values():  # Buscar en los valores
             logging.error(f"Código de función inválido: {function_code}")
@@ -141,8 +142,7 @@ class ModbusRTU_Commands:
             logging.error(f"Error al enviar comando: {e}")
             return None
         
-        
-    # Métodos para obtener las opciones de baudrate y paridad
+
 
     @staticmethod
     def get_baudrate_options():
