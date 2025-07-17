@@ -6,5 +6,3 @@ Con este repositorio se probarán los diferentes comandos que existen y como se 
 Proyecyo base en Python. Contiene una estructura inicial con 'src/' y 'tests/'
 
 ## Cómo ejecutar
-
-python src/main.py
