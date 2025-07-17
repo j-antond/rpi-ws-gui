@@ -3,6 +3,8 @@ import ttkbootstrap as ttk
 from ModbusRTU import ModbusRTU_Commands  # Importar los comandos Modbus
 from tkinter import messagebox
 import json
+import time
+import serial.tools.list_ports
 
 MAX_DEVICES = 5
 class HMI(ttk.Window):
@@ -74,9 +76,44 @@ class HMI(ttk.Window):
 class InicioPage(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
-        ttk.Label(self, text="🏠 Página de Inicio", font=("Arial", 16)).pack(pady=20)
-        ttk.Label(self, text="Bienvenido a la interfaz Raspberry-Modbus", font=("Arial", 12)).pack()
+        #Título (fila 0)
+        ttk.Label(self, text="🏠 Página de Inicio", font=("Arial", 18)).grid(row = 0, column=0, columnspan=2,pady=10)
+        #Subtítulo (fila 1)
+        ttk.Label(self, text="Bienvenido a la interfaz Raspberry-Modbus", font=("Arial", 14)).grid(row=1,column=0,columnspan=2,pady=5)
+     
+        # Obtener puertos disponibles
+        puertos = [p.device for p in serial.tools.list_ports.comports()]
 
+        ttk.Label(self, text=f"🔧 Puertos disponibles: ",font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=5, sticky="w")
+      
+        # Combobox con los puertos activos
+        self.combobox_puertos = ttk.Combobox(self, values=puertos, state="readonly", width=30)
+        self.combobox_puertos.grid(row=2, column=1, padx=10, pady=5)
+        if puertos:
+            self.combobox_puertos.current(0)  # Selecciona el primero por defecto
+
+        style = ttk.Style()
+        style.configure("BotonRojo.TButton", background="red")
+        style.configure("BotonVerde.TButton", background="green")
+        # Botón de conexión (opcional)
+        ttk.Button(self, text="Conectar",style="BotonVerde.TButton",command=self.conectar_puerto).grid(row=2, column=3, pady=10)
+        # Botón de desconexión
+        ttk.Button(self, text="Desconectar",style="BotonRojo.TButton", command=self.desconectar_puerto).grid(row=2, column=4, padx=5, pady=10)
+      
+        #Texto para mostrar que se está conectando/desconectando
+        self.result_label = ttk.Label(self, text="")
+        self.result_label.grid(row=4, column=0, columnspan=2, pady=10)
+
+     
+    def conectar_puerto(self):
+        puerto = self.combobox_puertos.get()
+        if puerto:
+            self.result_label.config(text=f"Intentando conectar a {puerto}...")
+            
+    def desconectar_puerto(self):
+        puerto = self.combobox_puertos.get()
+        if puerto:
+             self.result_label.config(text=f"Intentando desconectar de {puerto}...")
 
 # 🔹 Página de Configuración
 class ConfigPage(ttk.Frame):
