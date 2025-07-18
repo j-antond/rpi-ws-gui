@@ -85,7 +85,3 @@ mi_proyecto/
 ├── requirements.txt
 └── README.md
 ```
-
-- [X] Prueba
-- [ ] Prueba 2
-
