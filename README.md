@@ -86,5 +86,6 @@ mi_proyecto/
 └── README.md
 ```
 
-
+- [X] Prueba
+- [ ] Prueba 2
 
