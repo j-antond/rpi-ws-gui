@@ -1,0 +1,10 @@
+{
+    "device_address": [
+        "1",
+        "2"
+    ],
+    "device_name": [
+        "Waveshare 8CH DI/DO",
+        "Waveshare 8CH AO"
+    ]
+}
