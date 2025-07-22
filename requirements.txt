@@ -1,3 +1,0 @@
-numpy==1.26.4
-pyserial==3.5
-ttkbootstrap==1.10.1
