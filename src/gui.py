@@ -1,6 +1,6 @@
 import tkinter as tk
 import ttkbootstrap as ttk
-from ModbusRTU import ModbusRTU_Commands  # Importar los comandos Modbus
+from .ModbusRTU import ModbusRTU_Commands  # Importar los comandos Modbus
 from tkinter import messagebox
 import json
 import time
@@ -114,12 +114,22 @@ class InicioPage(ttk.Frame):
                 self.ser = serial.Serial(puerto)
                 self.result_label.config(text=f"Intentando conectar a {puerto}...")
                 
+                if self.ser.is_open:
+                    #print("✅ Port is open")
+                    if self.ser.in_waiting > 0:
+                        data = self.ser.readline().decode().strip()
+                        print(f"Data: {data}")
+                    else:
+                        print("No data waiting")
+                #else:
+                    #print("❌ Port is closed")
+                
             except Exception as e:
                 self.result_label.config(text=f"Error al conectar: {e}")
         else:
             self.result_label.config(text="Selecciona un puerto")
             
-    def desconectar_puerto(self):
+    def desconectar_puerto(self):   
         if self.ser and self.ser.is_open:
             self.ser.close()
             self.result_label.config(text="Puerto desconectado")
@@ -178,7 +188,7 @@ class ConfigPage(ttk.Frame):
         print(config_data)
         # Guardar los datos en un archivo JSON
         try:
-            with open("config.json", "w") as json_file:
+            with open("config/config.json", "w") as json_file:
                 json.dump(config_data, json_file, indent=4)
             messagebox.showinfo("Configuración guardada", "La configuración del dispositivo se ha guardado correctamente.")
         except Exception as e:
@@ -187,7 +197,7 @@ class ConfigPage(ttk.Frame):
     def load_config(self):
         """Cargar la configuración desde el archivo JSON"""
         try:
-            with open("config.json", "r") as json_file:
+            with open("config/config.json", "r") as json_file:
                 config_data = json.load(json_file)
                 device_address = config_data.get("device_address", [])
                 device_name = config_data.get("device_name", [])
