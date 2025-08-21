@@ -1,5 +1,5 @@
 import logging
-import pycrc
+from .import pycrc
 
 logging.basicConfig(level=logging.INFO)
 
