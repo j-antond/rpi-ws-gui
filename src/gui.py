@@ -353,7 +353,7 @@ class ModbusPage(ttk.Frame):
     def f_data_send(self, cmd):
         
 
-        # Asegúrate de que self.data_send esté correctamente inicializado
+        # Asegurar de que self.data_send esté correctamente inicializado
         if hasattr(self, 'data_send') and self.data_send is not None:
             message = f"✅ {cmd}"
             self.data_send.config(text=message, foreground="green")
@@ -361,13 +361,7 @@ class ModbusPage(ttk.Frame):
             print(f"Texto actualizado en GUI: {message}")
         else:
             print("❌ Error: self.data_send no está definido")
-
-    def get_cmd(self):
-        # Si el cmd viene de main.py, solo lo retornamos
-        return self.hola
-     
    
-        
     def f_data_receive(self,cmd):
         message = f"✅ {cmd}"
         
