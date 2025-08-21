@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import serial
-import pycrc
+from . import pycrc
 import time
 import numpy as np
-from ModbusRTU import ModbusRTU_Commands
-from gui import HMI, ModbusPage
+from .ModbusRTU import ModbusRTU_Commands
+from .gui import HMI, ModbusPage
+
 
 #s = serial.Serial("/dev/ttyUSB0",9600) 
 
@@ -93,13 +94,16 @@ def main(address,command,baudrate,parity):
             cmd= modbus_op.send_command(command,address,0)
     
     modbus_page.f_data_send(cmd)  # Pasamos cmd a la función f_data_send de la clase ModbusPage
- 
 
 
-# Si el archivo se ejecuta como script principal
-if __name__ == "__main__":
-    app = HMI(main)  
+app = HMI(main)  
+def start_gui():
     app.mainloop()
+    
+    
+# # Si el archivo se ejecuta como script principal
+# if __name__ == "__main__":
+#     app.mainloop()
          
         # for i in range(8):
         #     cmd = modbus_op.send_command(2,1,i)
