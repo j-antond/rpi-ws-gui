@@ -116,4 +116,5 @@ def start_gui():
         
         
         #mensaje = active_outputs(cmd_hex_read,cmd_read)
+        
  
