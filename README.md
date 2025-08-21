@@ -99,27 +99,20 @@ import ttkbootstrap
 
 ## 🖥 Ejecutar la interfaz gráfica (GUI)
 
-Para iniciar la interfaz gráfica del proyecto, simplemente ejecuta el archivo `main.py` desde la raíz del proyecto:
+Para iniciar la interfaz gráfica del proyecto, simplemente ejecuta el archivo `run.py`
 
 ```bash
-python -m src.main
+python run.py
 ```
 
 > ⚠️ Asegúrate de tener un archivo `__init__.py` dentro de la carpeta `src/` para que Python la reconozca como un paquete.
-
-
-## 🧪 Ejecutar tests
-
-```bash
-python -m unittest test.test_main
-```
 
 ---
 
 ## 🛠 Estructura del proyecto
 
 ```text
-mi_proyecto/
+my_project/
 ├── src/
 │   ├── __init__.py
 │   ├── gui.py
@@ -133,3 +126,4 @@ mi_proyecto/
 ├── requirements.txt
 └── README.md
 ```
+
