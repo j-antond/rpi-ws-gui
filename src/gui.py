@@ -7,6 +7,8 @@ import time
 import serial.tools.list_ports
 
 MAX_DEVICES = 5
+FONT_12 = ("Arial", 12)
+ser = None
 
 class HMI(ttk.Window):
     def __init__(self,on_execute_callback):
@@ -29,7 +31,7 @@ class HMI(ttk.Window):
         
 
         # Inicializar las páginas y pasar el callback a ModbusPage
-        for F in (InicioPage, ConfigPage, ModbusPage):
+        for F in (InicioPage, ConfigPage, ModbusPage,ExtraPage):
             frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -45,6 +47,7 @@ class HMI(ttk.Window):
         ttk.Button(self.navbar, text="🏠 Inicio", command=lambda: self.show_frame(InicioPage)).pack(side="left", padx=10, pady=5)
         ttk.Button(self.navbar, text="⚙️ Configuración", command=lambda: self.show_frame(ConfigPage)).pack(side="left", padx=10, pady=5)
         ttk.Button(self.navbar, text="📡 Modbus", command=lambda: self.show_frame(ModbusPage)).pack(side="left", padx=10, pady=5)
+        ttk.Button(self.navbar, text="➕ Extra", command=lambda: self.show_frame(ExtraPage)).pack(side="left", padx=10, pady=5)
 
     def show_frame(self, page):
         """Cambia de página"""
@@ -78,64 +81,230 @@ class InicioPage(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         #Título (fila 0)
-        ttk.Label(self, text="🏠 Página de Inicio", font=("Arial", 18)).grid(row = 0, column=0, columnspan=2,pady=10)
-        #Subtítulo (fila 1)
-        ttk.Label(self, text="Bienvenido a la interfaz Raspberry-Modbus", font=("Arial", 14)).grid(row=1,column=0,columnspan=2,pady=5)
+        ttk.Label(self, text="🏠 Bienvenido a la interfaz Raspberry-Modbus", font=("Arial", 18)).grid(row=0,column=0,columnspan=2,pady=15)
+        
+        ttk.Label(self,text="Conectarse usando:",font=FONT_12).grid(row=2,column=0,padx=10,pady=5,sticky="w")
      
+        self.combo_modos = ttk.Combobox(self, values=["Modbus RTU (Puerto serie/COM)", "Modbus TCP/IP"], state="readonly", width=30)
+        self.combo_modos.grid(row=2,column=1,padx=10,pady=5,sticky="w")
+        self.combo_modos.current(0)
+        
+        # Vincular evento de selección
+        self.combo_modos.bind("<<ComboboxSelected>>", self.on_cambio_modo)
+    
+        # ---- Widgets para RTU (puertos COM) ----
         # Obtener puertos disponibles
         puertos = [p.device for p in serial.tools.list_ports.comports()]
-
-        ttk.Label(self, text=f"🔧 Puertos disponibles: ",font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=5, sticky="w")
-      
-        # Combobox con los puertos activos
+        self.label_puertos = ttk.Label(self, text=f"Puertos disponibles: ",font=FONT_12)
+        self.label_puertos.grid(row=3, column=0, padx=10, pady=5, sticky="w")
         self.combobox_puertos = ttk.Combobox(self, values=puertos, state="readonly", width=30)
-        self.combobox_puertos.grid(row=2, column=1, padx=10, pady=5)
+        self.combobox_puertos.grid(row=3, column=1, padx=10, pady=5)
+        
         if puertos:
             self.combobox_puertos.current(0)  # Selecciona el primero por defecto
+        
+        # Texto para indicar cada parámetro 
+        self.label_baudrate = ttk.Label(self,text="Baudrate:",font=FONT_12)
+        self.label_baudrate.grid(row=4, column=0, padx=10, pady=5, sticky="w") 
+        
+        self.label_word_length = ttk.Label(self,text="Word Length:",font=FONT_12)
+        self.label_word_length.grid(row=5, column=0, padx=10, pady=5, sticky="w") 
+        
+        self.label_parity = ttk.Label(self,text="Parity:",font=FONT_12)
+        self.label_parity.grid(row=6, column=0, padx=10, pady=5, sticky="w") 
+        
+        self.label_stop_bits = ttk.Label(self,text="Stop Bits:",font=FONT_12)
+        self.label_stop_bits.grid(row=7, column=0, padx=10, pady=5, sticky="w") 
+        #Recuadros para seleccionar los parámetros
+        
+        #BAUDRATE
+        self.config_baudrate = ttk.Combobox(self,values=list(ModbusRTU_Commands.BAUDRATE.keys()))
+        self.config_baudrate.grid(row=4,column=1,sticky="w")
+        self.config_baudrate.insert(0,9600)
+        # Vincular evento de selección
+        self.config_baudrate.bind("<<ComboboxSelected>>", self.get_baudrate_value)
+        
+        #WORLD LENGTH
+        self.config_word_length = ttk.Combobox(self,values=[7,8])
+        self.config_word_length.grid(row=5,column=1,sticky="w")
+        self.config_word_length.insert(0,8)
+        # Vincular evento de selección
+        self.config_word_length.bind("<<ComboboxSelected>>", self.get_word_length)
+        
+        #PARITY
+        self.config_parity = ttk.Combobox(self,values=list(ModbusRTU_Commands.PARITY.keys()))
+        self.config_parity.grid(row=6,column=1,sticky="w")
+        self.config_parity.insert(0,"NONE")
+        # Vincular evento de selección
+        self.config_parity.bind("<<ComboboxSelected>>", self.get_parity)
 
+        #STOP BITS
+        self.config_stop_bits = ttk.Combobox(self,values=[1,2])
+        self.config_stop_bits.grid(row=7,column=1,sticky="w")
+        self.config_stop_bits.insert(0,1)
+        # Vincular evento de selección
+        self.config_stop_bits.bind("<<ComboboxSelected>>", self.get_stop_bits)
+        
+        # ---- Widgets para TCP/IP ----
+        self.label_ip = ttk.Label(self, text="🌐 Dirección IP:", font=FONT_12)
+        self.entry_ip = ttk.Entry(self, width=30)
+        self.entry_ip.insert(0, "192.168.0.100")
+        
+        self.label_puerto_tcp = ttk.Label(self, text="🔌 Puerto TCP:", font=FONT_12)
+        self.entry_puerto_tcp = ttk.Entry(self, width=5)
+        self.entry_puerto_tcp.insert(0, 502)
+        
+        # Mostrar por defecto los widgets RTU
+        self.mostrar_rtu()
+        
         style = ttk.Style()
         style.configure("BotonRojo.TButton", background="red")
         style.configure("BotonVerde.TButton", background="green")
         # Botón de conexión (opcional)
-        ttk.Button(self, text="Conectar",style="BotonVerde.TButton",command=self.conectar_puerto).grid(row=2, column=3, pady=10)
+        ttk.Button(self, text="Conectar",style="BotonVerde.TButton",command=self.conectar_puerto).grid(row=10, column=0, pady=10)
         # Botón de desconexión
-        ttk.Button(self, text="Desconectar",style="BotonRojo.TButton", command=self.desconectar_puerto).grid(row=2, column=4, padx=5, pady=10)
+        ttk.Button(self, text="Desconectar",style="BotonRojo.TButton", command=self.desconectar_puerto).grid(row=10, column=1, padx=5, pady=10)
       
         #Texto para mostrar que se está conectando/desconectando
         self.result_label = ttk.Label(self, text="")
-        self.result_label.grid(row=4, column=0, columnspan=2, pady=10)
+        self.result_label.grid(row=12, column=0, columnspan=2, pady=10)
         
-        self.ser = None
-     
+    
+        
+        
+    def on_cambio_modo(self,event):
+        #valor = self.combo_modos.get()
+        modo = self.combo_modos.current()
+        
+        if modo==0:
+            self.mostrar_rtu()
+        else:
+            self.mostrar_tcp()
+        
+        
+        print(f"Seleccionaste: {modo}")
+        
+    def mostrar_rtu(self):
+        """Muestra los widgets para RTU y oculta los de TCP"""
+        self.label_puertos.grid()
+        self.combobox_puertos.grid()
+        self.label_baudrate.grid()
+        self.label_parity.grid()
+        self.label_stop_bits.grid()
+        self.label_word_length.grid()
+        self.config_baudrate.grid()
+        self.config_parity.grid()
+        self.config_stop_bits.grid()
+        self.config_word_length.grid()
+        
+        self.label_ip.grid_remove()
+        self.entry_ip.grid_remove()
+        self.label_puerto_tcp.grid_remove()
+        self.entry_puerto_tcp.grid_remove()
+        
+    def mostrar_tcp(self):
+        """Muestra widgets para TCP/IP y oculta los de RTU"""
+        self.label_puertos.grid_remove()
+        self.combobox_puertos.grid_remove()
+        self.label_baudrate.grid_remove()
+        self.label_parity.grid_remove()
+        self.label_stop_bits.grid_remove()
+        self.label_word_length.grid_remove()
+        self.config_baudrate.grid_remove()
+        self.config_parity.grid_remove()
+        self.config_stop_bits.grid_remove()
+        self.config_word_length.grid_remove()
+        
+        self.label_ip.grid(row=3, column=0, padx=10, pady=5, sticky="w")
+        self.entry_ip.grid(row=3, column=1, padx=10, pady=5, sticky="w")
+        self.label_puerto_tcp.grid(row=4, column=0, padx=10, pady=5, sticky="w")
+        self.entry_puerto_tcp.grid(row=4, column=1, padx=10, pady=5, sticky="w")
+        
+        
     def conectar_puerto(self):
         puerto = self.combobox_puertos.get()
-        if puerto:
-            try:
-                self.ser = serial.Serial(puerto)
-                self.result_label.config(text=f"Intentando conectar a {puerto}...")
-                
-                if self.ser.is_open:
-                    #print("✅ Port is open")
-                    if self.ser.in_waiting > 0:
-                        data = self.ser.readline().decode().strip()
-                        print(f"Data: {data}")
+        modo = self.combo_modos.current()
+        baudrate = int(self.config_baudrate.get())
+        bytesize = int(self.config_word_length.get())
+        parity = self.config_parity.get()
+        stopbits = int(self.config_stop_bits.get())
+        
+        mapping_bytesize = {
+            7: serial.SEVENBITS,
+            8: serial.EIGHTBITS
+        }
+        
+        mapping_parity = {
+            "NONE": serial.PARITY_NONE,
+            "EVEN": serial.PARITY_EVEN,
+            "ODD":  serial.PARITY_ODD
+        }
+        
+        mapping_stop_bits = {
+            1: serial.STOPBITS_ONE,
+            2: serial.STOPBITS_TWO            
+        }
+        
+        # Imprimimos para ver si los valores son correctos
+        # print("Valor:", mapping_bytesize[bytesize])
+        # print("Valor:", mapping_parity["NONE"])
+        # print("Valor:", mapping_stop_bits[1])
+        
+        if modo==0:
+            if puerto:
+                try:
+                    ser = serial.Serial(port=puerto,
+                                             baudrate=baudrate,
+                                             bytesize=mapping_bytesize[bytesize],
+                                             parity=mapping_parity[parity],
+                                             stopbits=mapping_stop_bits[stopbits],
+                                             timeout=1
+                                             )
+                    
+                    self.result_label.config(text=f"Intentando conectar a {puerto}...")
+                    
+                    if ser.is_open:
+                        print("✅ Port is open")
+                        if ser.in_waiting > 0:
+                            data = ser.readline().decode().strip()
+                            print(f"Data: {data}")
+                        else:
+                            print("No data waiting")
                     else:
-                        print("No data waiting")
-                #else:
-                    #print("❌ Port is closed")
-                
-            except Exception as e:
-                self.result_label.config(text=f"Error al conectar: {e}")
+                        print("❌ Port is closed")
+                    
+                except Exception as e:
+                    self.result_label.config(text=f"Error al conectar: {e}")
+            else:
+                self.result_label.config(text="Selecciona un puerto")
         else:
-            self.result_label.config(text="Selecciona un puerto")
+            ip = self.entry_ip.get()
+            puerto = self.entry_puerto_tcp.get()
+            print(f"Conectando por TCP a {ip}:{puerto}")
             
     def desconectar_puerto(self):   
-        if self.ser and self.ser.is_open:
-            self.ser.close()
+        if ser and ser.is_open:
+            ser.close()
             self.result_label.config(text="Puerto desconectado")
         else:
             self.result_label.config(text="No hay conexión abierta")
-
+    
+    def get_baudrate_value(self,event):
+        clave = self.config_baudrate.get()
+        print(f"Seleccionaste baudrate: {clave}")
+    
+    def get_word_length(self,event):
+        clave = self.config_word_length.get()
+        print(f"Seleccionaste tamaño de palabra: {clave}")    
+        
+    def get_parity(self,event):
+        clave = self.config_parity.get()
+        print(f"Seleccionaste baudrate: {clave}")    
+    
+    def get_stop_bits(self,event):
+        clave = self.config_stop_bits.get()
+        print(f"Seleccionaste bits de parada: {clave}")
+         
 # 🔹 Página de Configuración
 class ConfigPage(ttk.Frame):
     def __init__(self, parent, controller):
@@ -215,7 +384,7 @@ class ConfigPage(ttk.Frame):
             print("El archivo de configuración no existe. No se puede cargar.")
         except json.JSONDecodeError:
             print("Error al leer el archivo de configuración.")
-            
+               
 class ModbusPage(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -263,9 +432,7 @@ class ModbusPage(ttk.Frame):
         # Etiqueta para mostrar datos que enviamos (cmd send)
         self.data_send = ttk.Label(self, text="Esperando datos...")
         self.data_send.grid(row=5, column=0, columnspan=2, pady=10)
-  
-        
-        # Etiqueta para mostrar datos que recibimos (cmd received)
+          # Etiqueta para mostrar datos que recibimos (cmd received)
         self.data_receive = ttk.Label(self, text="")
         self.data_receive.grid(row=6, column=0, columnspan=2, pady=10)
         
@@ -332,10 +499,10 @@ class ModbusPage(ttk.Frame):
             return (device_address, command_code, baudrate, parity)
 
         self.result_label.config(text=message, foreground="green")
-        return (device_address, command_code, None, None)
+        return (int(device_address), command_code, None, None)
     
     def execute_and_store(self):
-        address, command , baudrate , parity = self.execute_command()
+        address, command , baudrate , parity = self.execute_command()# address, command, baudrate, parity = check_values(address,command,baudrate,parity)
       
         if address is None:
             return
@@ -343,19 +510,28 @@ class ModbusPage(ttk.Frame):
         # Al llamar al callback proporcionado por main.py, pasamos los valores
         self.controller.on_execute_callback(address, command, baudrate, parity)
         
-        # modbus_op = ModbusRTU_Commands()
-        # address = int(address)
-        # modbus_op.send_command(command,address,0,baudrate,parity)
-   
-       
+        modbus_op = ModbusRTU_Commands()
         
+        exists,command_name = modbus_op.command_exists(command,ModbusRTU_Commands.COMMANDS)
+    
+        if exists:
+            if command == 9:
+            
+                cmd= modbus_op.send_command(command,address,0,baudrate,parity)
+            else:
+                cmd= modbus_op.send_command(command,address,0)
+                
+        self.f_data_send(cmd)
+        self.f_data_receive()
+        
+    
 
     def f_data_send(self, cmd):
         
-
-        # Asegurar de que self.data_send esté correctamente inicializado
+        # Asegurar que self.data_send esté correctamente inicializado
         if hasattr(self, 'data_send') and self.data_send is not None:
-            message = f"✅ {cmd}"
+            
+            message = f"✅ Código enviado {cmd}"
             self.data_send.config(text=message, foreground="green")
             self.data_send.update_idletasks()  # Forzar la actualización de la interfaz
             print(f"Texto actualizado en GUI: {message}")
@@ -366,6 +542,9 @@ class ModbusPage(ttk.Frame):
         message = f"✅ {cmd}"
         
         self.data_receive.config(text=message, foreground="green")
+        print(f"❌{message} ")
+        
+        
     # def save_modbus_config(self, address, command, baudrate, parity):
     #     """Guardar la configuración Modbus en un archivo JSON"""
     #     modbus_config = {
@@ -413,3 +592,24 @@ class ModbusPage(ttk.Frame):
     #         print("El archivo de configuración Modbus no existe. No se puede cargar.")
     #     except json.JSONDecodeError:
     #         print("Error al leer el archivo de configuración Modbus.")
+
+class ExtraPage(ttk.Frame):
+    
+      def __init__(self, parent, controller):
+        super().__init__(parent)
+       # Limpiar la ventana
+        self.device_address = []
+        self.device_name = []
+     # Título de la página de configuración
+        ttk.Label(self, text="⚙️ Página Extra", font=("Arial", 18)).grid(row=0, column=0, columnspan=2, pady=20)
+
+        # Dirección del dispositivo (columna 1)
+        ttk.Label(self, text="📍 Prueba").grid(row=1, column=1, pady=5, sticky="w", padx=10)
+
+        # Nombre del dispositivo (columna 2)
+        ttk.Label(self, text=" Prueba 2",font=("Arial",25)).grid(row=1, column=3, pady=5, sticky="w", padx=10)
+        
+        # Botón de conexión (opcional)
+        ttk.Button(self, text="",style="BotonVerde.TButton").grid(row=2, column=1, ipadx=10, pady=10)
+        # Botón de desconexión
+        ttk.Button(self, text="",style="BotonRojo.TButton").grid(row=2, column=3, ipadx=10, pady=10)
